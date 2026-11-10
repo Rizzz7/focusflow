@@ -1,0 +1,699 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Focus Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+
+<style>
+/* Layout: single dark column — productivity timer with compound scoring */
+:root {
+  --bg: #f2f4f8;
+  --surface: #ffffff;
+  --surface2: #eaecf3;
+  --border: #d5d9e5;
+  --fg: #1a1d2e;
+  --fg-muted: #6b7280;
+  --accent: #d4870a;
+  --accent-bg: rgba(212,135,10,0.1);
+  --success: #15803d;
+  --success-bg: rgba(21,128,61,0.1);
+  --danger: #dc2626;
+  --ring-track: #dde0ea;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-ui: 'Inter', system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0f14;
+    --surface: #161922;
+    --surface2: #1e2330;
+    --border: #2a3040;
+    --fg: #e8eaf0;
+    --fg-muted: #7a8099;
+    --accent: #f0a500;
+    --accent-bg: rgba(240,165,0,0.12);
+    --success: #4ade80;
+    --success-bg: rgba(74,222,128,0.12);
+    --danger: #f87171;
+    --ring-track: #252c3d;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0d0f14;
+  --surface: #161922;
+  --surface2: #1e2330;
+  --border: #2a3040;
+  --fg: #e8eaf0;
+  --fg-muted: #7a8099;
+  --accent: #f0a500;
+  --accent-bg: rgba(240,165,0,0.12);
+  --success: #4ade80;
+  --success-bg: rgba(74,222,128,0.12);
+  --danger: #f87171;
+  --ring-track: #252c3d;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--fg);
+  margin: 0;
+  padding-block: 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+.app {
+  max-width: 500px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 2px;
+}
+
+.app-name {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.points-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  background: var(--accent-bg);
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+
+.points-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.points-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.75;
+}
+
+/* ── Cycle Card ── */
+.cycle-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.ring-wrap {
+  flex-shrink: 0;
+  position: relative;
+  width: 84px;
+  height: 84px;
+}
+
+.ring-wrap svg {
+  width: 84px;
+  height: 84px;
+  transform: rotate(-90deg);
+}
+
+.ring-track {
+  fill: none;
+  stroke: var(--ring-track);
+  stroke-width: 5.5;
+}
+
+.ring-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.4s;
+}
+
+.ring-fill.break { stroke: var(--success); }
+
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.ring-time {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ring-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.cycle-info { flex: 1; min-width: 0; }
+
+.cycle-phase {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.cycle-sub {
+  font-size: 13px;
+  color: var(--fg-muted);
+  line-height: 1.45;
+}
+
+.cycle-cycles {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cycle-cycles::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ── Task Card ── */
+.task-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.task-input-area {
+  padding: 18px 18px 16px;
+}
+
+.input-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 10px;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.task-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.task-input:focus { border-color: var(--accent); }
+.task-input::placeholder { color: var(--fg-muted); opacity: 0.6; }
+.task-input:disabled { opacity: 0.45; }
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 18px;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.btn:active:not(:disabled) { transform: scale(0.96); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-start { background: var(--accent); color: #fff; }
+.btn-stop  { background: var(--danger); color: #fff; }
+
+.active-task {
+  padding: 16px 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.65); }
+}
+
+.active-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.active-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-timer {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.earn-preview {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 3px;
+}
+
+.earn-preview strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+/* ── Log ── */
+.log-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.log-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: 2px;
+}
+
+.log-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.mult-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-bg);
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.log-empty {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideIn 0.22s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .log-item { animation: none; }
+  .pulse-dot { animation: none; }
+  .ring-fill { transition: none; }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.log-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  min-width: 18px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.log-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-task-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-meta {
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+.log-pts {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--success);
+  background: var(--success-bg);
+  padding: 4px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+</style>
+
+<div class="app">
+
+  <header class="header">
+    <div class="app-name">Focus Flow</div>
+    <div class="points-chip">
+      <div class="points-value" id="totalPts">0</div>
+      <div class="points-label">pts</div>
+    </div>
+  </header>
+
+  <!-- Cycle ring -->
+  <div class="cycle-card">
+    <div class="ring-wrap">
+      <svg viewBox="0 0 84 84" aria-hidden="true">
+        <circle class="ring-track" cx="42" cy="42" r="35"/>
+        <circle class="ring-fill" id="ringFill" cx="42" cy="42" r="35"
+          stroke-dasharray="219.9" stroke-dashoffset="0"/>
+      </svg>
+      <div class="ring-center">
+        <div class="ring-time" id="cycleTime">60:00</div>
+        <div class="ring-label" id="ringLabel">focus</div>
+      </div>
+    </div>
+    <div class="cycle-info">
+      <div class="cycle-phase" id="cyclePhase">Focus session</div>
+      <div class="cycle-sub" id="cycleSub">60 min deep work. Points compound with every task you complete.</div>
+      <div class="cycle-cycles" id="cycleCycles" hidden></div>
+    </div>
+  </div>
+
+  <!-- Task input / active task -->
+  <div class="task-card">
+    <div class="task-input-area">
+      <div class="input-label">Current task</div>
+      <div class="input-row">
+        <input class="task-input" id="taskInput" type="text"
+          placeholder="What are you working on?" maxlength="100" autocomplete="off">
+        <button class="btn btn-start" id="startBtn" onclick="startTask()">Start</button>
+      </div>
+    </div>
+    <div class="active-task" id="activeArea" hidden>
+      <div class="pulse-dot"></div>
+      <div class="active-info">
+        <div class="active-name" id="activeName"></div>
+        <div class="active-timer" id="activeTimer">00:00</div>
+        <div class="earn-preview">Earn <strong id="projPts">—</strong> pts on stop</div>
+      </div>
+      <button class="btn btn-stop" onclick="stopTask()">Stop</button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-section">
+    <div class="log-header-row">
+      <div class="log-title">Completed</div>
+      <div class="mult-badge" id="multBadge">×1.00 multiplier</div>
+    </div>
+    <div class="log-empty" id="logEmpty">
+      Start your first task.<br>Points compound with each completion — don't break the streak.
+    </div>
+    <div class="log-list" id="logList"></div>
+  </div>
+
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────
+const CIRCUMFERENCE = 2 * Math.PI * 35; // ≈ 219.9
+const FOCUS_SECS = 3600;   // 60 min
+const BREAK_SECS = 900;    // 15 min
+const BASE_PTS   = 10;     // points per minute at ×1
+const RATE       = 1.20;   // compound rate per task
+
+// ── State ──────────────────────────────────────────────────────
+let totalPts      = 0;
+let doneCount     = 0;
+let taskStart     = null;
+let taskName      = '';
+let taskInterval  = null;
+let cyclePhase    = 'focus';  // 'focus' | 'break'
+let cycleSecs     = FOCUS_SECS;
+let cyclesFinished = 0;
+
+// ── Utilities ──────────────────────────────────────────────────
+const pad = n => String(n).padStart(2, '0');
+
+function fmtElapsed(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  return h > 0
+    ? `${pad(h)}:${pad(m % 60)}:${pad(s % 60)}`
+    : `${pad(m)}:${pad(s % 60)}`;
+}
+
+function fmtDuration(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  if (m === 0) return `${s}s`;
+  return s % 60 ? `${m}m ${s % 60}s` : `${m}m`;
+}
+
+function currentMultiplier() {
+  return Math.pow(RATE, doneCount);
+}
+
+function calcPts(ms) {
+  const mins = Math.max(ms / 60000, 1 / 6); // 10 sec min counts
+  return Math.round(mins * currentMultiplier() * BASE_PTS);
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Task ───────────────────────────────────────────────────────
+function startTask() {
+  const inp = document.getElementById('taskInput');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+
+  taskName  = name;
+  taskStart = Date.now();
+
+  inp.disabled = true;
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('activeName').textContent = name;
+  document.getElementById('activeArea').hidden = false;
+
+  taskInterval = setInterval(tickTask, 250);
+  tickTask();
+}
+
+function tickTask() {
+  if (!taskStart) return;
+  const elapsed = Date.now() - taskStart;
+  document.getElementById('activeTimer').textContent = fmtElapsed(elapsed);
+  document.getElementById('projPts').textContent = calcPts(elapsed).toLocaleString();
+}
+
+function stopTask() {
+  if (!taskStart) return;
+  const elapsed = Date.now() - taskStart;
+  clearInterval(taskInterval);
+  taskInterval = null;
+
+  const pts = calcPts(elapsed);
+  const num = doneCount + 1;
+  addLogItem(taskName, elapsed, pts, num, Math.pow(RATE, doneCount));
+
+  doneCount++;
+  totalPts += pts;
+  document.getElementById('totalPts').textContent = totalPts.toLocaleString();
+  updateMultBadge();
+
+  // reset
+  taskStart = null;
+  const inp = document.getElementById('taskInput');
+  inp.value = '';
+  inp.disabled = false;
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('activeArea').hidden = true;
+  document.getElementById('logEmpty').hidden = true;
+  inp.focus();
+}
+
+function addLogItem(name, ms, pts, num, mult) {
+  const el = document.createElement('div');
+  el.className = 'log-item';
+  el.innerHTML = `
+    <div class="log-num">${num}</div>
+    <div class="log-body">
+      <div class="log-task-name">${esc(name)}</div>
+      <div class="log-meta">${fmtDuration(ms)} · ×${mult.toFixed(2)}</div>
+    </div>
+    <div class="log-pts">+${pts.toLocaleString()}</div>
+  `;
+  document.getElementById('logList').prepend(el);
+}
+
+function updateMultBadge() {
+  document.getElementById('multBadge').textContent =
+    `×${currentMultiplier().toFixed(2)} multiplier`;
+}
+
+// ── Cycle timer ────────────────────────────────────────────────
+function tickCycle() {
+  cycleSecs--;
+  if (cycleSecs <= 0) {
+    if (cyclePhase === 'focus') {
+      cyclePhase = 'break';
+      cycleSecs  = BREAK_SECS;
+      cyclesFinished++;
+    } else {
+      cyclePhase = 'focus';
+      cycleSecs  = FOCUS_SECS;
+    }
+  }
+  renderCycle();
+}
+
+function renderCycle() {
+  const total   = cyclePhase === 'focus' ? FOCUS_SECS : BREAK_SECS;
+  const progress = cycleSecs / total;           // 1→0
+  const offset   = CIRCUMFERENCE * (1 - progress);
+
+  const m = Math.floor(cycleSecs / 60);
+  const s = cycleSecs % 60;
+  document.getElementById('cycleTime').textContent = `${pad(m)}:${pad(s)}`;
+
+  const fill = document.getElementById('ringFill');
+  fill.style.strokeDashoffset = offset.toFixed(2);
+
+  if (cyclePhase === 'focus') {
+    fill.classList.remove('break');
+    document.getElementById('ringLabel').textContent = 'focus';
+    document.getElementById('cyclePhase').textContent = 'Focus session';
+    document.getElementById('cycleSub').textContent = '60 min deep work. Points compound with every task you complete.';
+  } else {
+    fill.classList.add('break');
+    document.getElementById('ringLabel').textContent = 'break';
+    document.getElementById('cyclePhase').textContent = 'Break time';
+    document.getElementById('cycleSub').textContent = '15 min to rest. Step away, breathe, let your focus restore.';
+  }
+
+  const cc = document.getElementById('cycleCycles');
+  if (cyclesFinished > 0) {
+    cc.hidden = false;
+    cc.textContent = `${cyclesFinished} focus cycle${cyclesFinished > 1 ? 's' : ''} complete`;
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────
+renderCycle();
+updateMultBadge();
+setInterval(tickCycle, 1000);
+
+document.getElementById('taskInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startTask();
+});
+</script>
+
+</body></html>
